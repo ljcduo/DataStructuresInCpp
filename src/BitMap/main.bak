@@ -1,0 +1,67 @@
+/******************************************************************************************
+* Data Structures in C++
+* ISBN: 7-302-33064-6 & 7-302-33065-3 & 7-302-29652-2 & 7-302-26883-3
+* Junhui DENG, deng@tsinghua.edu.cn
+* Computer Science & Technology, Tsinghua University
+* Copyright (c) 2006-2013. All rights reserved.
+******************************************************************************************/
+
+#pragma warning(disable : 4996 4800)
+#include "../_share/util.h"
+
+/******************************************************************************************
+ * 测试位图
+ ******************************************************************************************/
+int testBitmap(int n) {
+   bool* B = new bool[n]; memset(B, 0, n*sizeof(bool)); //常规位图，创建后随即O(n)时间初始化
+
+// 以下向量联合构成改进位图，只需O(1)时间（隐式地）初始化
+   Rank* F = new Rank[n]; //记录B[k]被标记的次序（在栈T[]中的秩）
+   Rank* T = new Rank[n]; Rank top = 0; //依次记录被标记元素的秩
+
+#define test(k, t) ( (F[k] < t) && (k == T[F[k]]) )
+#define set(k, t) { T[t] = k; F[k] = t++; }
+#define clear(k) { T[F[k]] = - k - 1; }
+#define erased(k, t) ( (F[k] < t) && (- k == T[F[k]] + 1) )
+#define unerase(k) { T[F[k]] = k; }
+
+   for (int i = 0; i < 9*n; i++) {
+      int k = dice(n);
+      if (dice(2)) { printf("set(%d) ...\n", k); //set(k)
+         B[k] = true;
+         if (!test(k, top)) //仅标记尚未标记的位
+            if (erased(k, top)) { unerase(k); } //曾经标记，后被清除：恢复校验环
+            else set(k, top); //初次标记：建立校验环
+      } else { printf("clear(%d) ...\n", k); //clear(k)
+         B[k] = false;
+         if (test(k, top)) clear(k); //仅清除已带标记的位
+      }
+      printf("\n CRC: ");
+      for (int j = 0; j < n; j++) printf("%6c", B[j] == test(j, top) ? ' ' : '!');
+      printf("\n B[]: ");
+      for (int j = 0; j < n; j++) printf("%6c", B[j] ? 'x' : '.');
+      printf("\n M[]: ");
+      for (int j = 0; j < n; j++) printf("%6c", test(j, top) ? 'x' : '.');
+      printf("\nSF[]: ");
+      for (int j = 0; j < n; j++) test(j, top) || erased(j, top) ? printf("%6d", F[j]) : printf("%6c", ' ');
+      printf("\nST[]: ");
+      for (int j = 0; j < top; j++) printf("%6d", T[j]);
+      printf("\n\n\n");
+   }
+
+   delete [] B;
+
+   delete [] F;
+   delete [] T;
+
+   return 0;
+}
+
+/******************************************************************************************
+ * 测试位图
+ ******************************************************************************************/
+int main(int argc, char* argv[]) {
+   if (2 > argc) { printf("Usage: %s <size of test>\a\a\n", argv[0]); return 1; }
+   srand((unsigned int)time(NULL)); //设置随机种子
+   return testBitmap(atoi(argv[1])); //启动测试
+}
